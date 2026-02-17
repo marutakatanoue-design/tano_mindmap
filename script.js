@@ -48,6 +48,7 @@ const app = {
         }
 
         this._bindGlobalEvents();
+        this._bindTouchEvents();
         this.render();
         this.renderMapList();
 
@@ -481,6 +482,256 @@ const app = {
     // ==========================================================
     //  イベント — ポインタ統合（5px 閾値）
     // ==========================================================
+    // ==========================================================
+    //  タッチ対応 (スマホ/タブレット)
+    // ==========================================================
+    _bindTouchEvents() {
+        const vp = this.dom.viewport;
+
+        vp.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) return; // マルチタッチは除外
+            const t = e.touches[0];
+            const target = document.elementFromPoint(t.clientX, t.clientY);
+
+            // コントロール等は除外
+            if (target && (target.closest('#controls') || target.closest('button') || target.closest('.toggle-btn') || target.closest('#sidebar-toggle'))) return;
+
+            const nodeEl = target ? target.closest('.node') : null;
+
+            if (nodeEl) {
+                // ノードドラッグ開始
+                const id = nodeEl.id;
+                const node = this.nodes.find(n => n.id === id);
+                if (node) {
+                    this._onNodeDown({
+                        clientX: t.clientX,
+                        clientY: t.clientY,
+                        stopPropagation: () => { },
+                        preventDefault: () => { }
+                    }, node);
+                }
+            } else {
+                // 背景パン開始
+                if (this.selectedId) {
+                    this.selectedId = null;
+                    this.render();
+                }
+                this.pointer.down = true;
+                this.pointer.isDragging = false;
+                this.pointer.type = 'pan';
+                this.pointer.startX = t.clientX;
+                this.pointer.startY = t.clientY;
+            }
+        }, { passive: false });
+
+        vp.addEventListener('touchmove', (e) => {
+            if (!this.pointer.down) return;
+            e.preventDefault(); // スクロール抑止
+            const t = e.touches[0];
+
+            const dx = t.clientX - this.pointer.startX;
+            const dy = t.clientY - this.pointer.startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (!this.pointer.isDragging && dist < DRAG_THRESHOLD) return;
+
+            if (!this.pointer.isDragging) {
+                this.pointer.isDragging = true;
+                if (this.pointer.type === 'node') {
+                    document.activeElement && document.activeElement.blur();
+                }
+            }
+
+            if (this.pointer.type === 'pan') {
+                this.view.tx += (t.clientX - this.pointer.startX);
+                this.view.ty += (t.clientY - this.pointer.startY);
+                this.pointer.startX = t.clientX;
+                this.pointer.startY = t.clientY;
+                this._applyTransform();
+            } else if (this.pointer.type === 'node') {
+                const node = this.pointer.node;
+                const mx = (t.clientX - this.pointer.startX) / this.view.scale;
+                const my = (t.clientY - this.pointer.startY) / this.view.scale;
+                node.x = this.pointer.origNodeX + mx;
+                node.y = this.pointer.origNodeY + my;
+
+                // ドロップターゲット判定 (Touch専用)
+                this.pointer.dropTargetId = null;
+                const els = document.elementsFromPoint(t.clientX, t.clientY);
+                const targetEl = els.find(el => el.classList.contains('node') && el.id !== node.id);
+                if (targetEl) this.pointer.dropTargetId = targetEl.id;
+
+                this.render();
+            }
+        }, { passive: false });
+
+        vp.addEventListener('touchend', (e) => {
+            if (!this.pointer.down) return;
+
+            if (this.pointer.type === 'node' && this.pointer.isDragging) {
+                // Drop Logic
+                const node = this.pointer.node;
+                if (this.pointer.dropTargetId) {
+                    if (!this.isDescendant(node.id, this.pointer.dropTargetId)) {
+                        node.parentId = this.pointer.dropTargetId;
+                        const target = this.nodes.find(n => n.id === this.pointer.dropTargetId);
+                        if (target) {
+                            node.side = node.x < target.x ? 'left' : 'right';
+                        }
+                    }
+                } else if (node.parentId) {
+                    const parent = this.nodes.find(n => n.id === node.parentId);
+                    if (parent) {
+                        const d = Math.hypot(node.x - parent.x, node.y - parent.y);
+                        if (d > DETACH_DISTANCE) node.parentId = null;
+                    }
+                }
+                this.pointer.dropTargetId = null;
+                this.pointer.node = null;
+                this.updateLayout();
+                this.render();
+                this.saveCurrentMap();
+                this.renderMapList();
+            } else if (this.pointer.type === 'node' && !this.pointer.isDragging) {
+                // Tap (Select)
+                this.selectedId = this.pointer.node.id;
+                this.dom.nodes.querySelectorAll('.node').forEach(el => {
+                    el.classList.toggle('selected', el.id === this.pointer.node.id);
+                });
+            }
+
+            this.pointer.down = false;
+            this.pointer.isDragging = false;
+            this.pointer.type = null;
+            this.pointer.node = null;
+        });
+    },
+
+    // ==========================================================
+    //  タッチ対応 (スマホ/タブレット)
+    // ==========================================================
+    _bindTouchEvents() {
+        const vp = this.dom.viewport;
+
+        vp.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) return; // マルチタッチは除外
+            const t = e.touches[0];
+            const target = document.elementFromPoint(t.clientX, t.clientY);
+
+            // コントロール等は除外
+            if (target && (target.closest('#controls') || target.closest('button') || target.closest('.toggle-btn') || target.closest('#sidebar-toggle'))) return;
+
+            const nodeEl = target ? target.closest('.node') : null;
+
+            if (nodeEl) {
+                // ノードドラッグ開始
+                const id = nodeEl.id;
+                const node = this.nodes.find(n => n.id === id);
+                if (node) {
+                    this._onNodeDown({
+                        clientX: t.clientX,
+                        clientY: t.clientY,
+                        stopPropagation: () => { },
+                        preventDefault: () => { }
+                    }, node);
+                }
+            } else {
+                // 背景パン開始
+                if (this.selectedId) {
+                    this.selectedId = null;
+                    this.render();
+                }
+                this.pointer.down = true;
+                this.pointer.isDragging = false;
+                this.pointer.type = 'pan';
+                this.pointer.startX = t.clientX;
+                this.pointer.startY = t.clientY;
+            }
+        }, { passive: false });
+
+        vp.addEventListener('touchmove', (e) => {
+            if (!this.pointer.down) return;
+            e.preventDefault(); // スクロール抑止
+            const t = e.touches[0];
+
+            const dx = t.clientX - this.pointer.startX;
+            const dy = t.clientY - this.pointer.startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (!this.pointer.isDragging && dist < DRAG_THRESHOLD) return;
+
+            if (!this.pointer.isDragging) {
+                this.pointer.isDragging = true;
+                if (this.pointer.type === 'node') {
+                    document.activeElement && document.activeElement.blur();
+                }
+            }
+
+            if (this.pointer.type === 'pan') {
+                this.view.tx += (t.clientX - this.pointer.startX);
+                this.view.ty += (t.clientY - this.pointer.startY);
+                this.pointer.startX = t.clientX;
+                this.pointer.startY = t.clientY;
+                this._applyTransform();
+            } else if (this.pointer.type === 'node') {
+                const node = this.pointer.node;
+                const mx = (t.clientX - this.pointer.startX) / this.view.scale;
+                const my = (t.clientY - this.pointer.startY) / this.view.scale;
+                node.x = this.pointer.origNodeX + mx;
+                node.y = this.pointer.origNodeY + my;
+
+                // ドロップターゲット判定 (Touch専用)
+                this.pointer.dropTargetId = null;
+                const els = document.elementsFromPoint(t.clientX, t.clientY);
+                const targetEl = els.find(el => el.classList.contains('node') && el.id !== node.id);
+                if (targetEl) this.pointer.dropTargetId = targetEl.id;
+
+                this.render();
+            }
+        }, { passive: false });
+
+        vp.addEventListener('touchend', (e) => {
+            if (!this.pointer.down) return;
+
+            if (this.pointer.type === 'node' && this.pointer.isDragging) {
+                // Drop Logic
+                const node = this.pointer.node;
+                if (this.pointer.dropTargetId) {
+                    if (!this.isDescendant(node.id, this.pointer.dropTargetId)) {
+                        node.parentId = this.pointer.dropTargetId;
+                        const target = this.nodes.find(n => n.id === this.pointer.dropTargetId);
+                        if (target) {
+                            node.side = node.x < target.x ? 'left' : 'right';
+                        }
+                    }
+                } else if (node.parentId) {
+                    const parent = this.nodes.find(n => n.id === node.parentId);
+                    if (parent) {
+                        const d = Math.hypot(node.x - parent.x, node.y - parent.y);
+                        if (d > DETACH_DISTANCE) node.parentId = null;
+                    }
+                }
+                this.pointer.dropTargetId = null;
+                this.pointer.node = null;
+                this.updateLayout();
+                this.render();
+                this.saveCurrentMap();
+                this.renderMapList();
+            } else if (this.pointer.type === 'node' && !this.pointer.isDragging) {
+                // Tap (Select)
+                this.selectedId = this.pointer.node.id;
+                this.dom.nodes.querySelectorAll('.node').forEach(el => {
+                    el.classList.toggle('selected', el.id === this.pointer.node.id);
+                });
+            }
+
+            this.pointer.down = false;
+            this.pointer.isDragging = false;
+            this.pointer.type = null;
+            this.pointer.node = null;
+        });
+    },
+
     _bindGlobalEvents() {
         // --- viewport mousedown (パン開始候補 + 選択解除) ---
         this.dom.viewport.addEventListener('mousedown', (e) => {
