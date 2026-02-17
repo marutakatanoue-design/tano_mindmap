@@ -36,6 +36,39 @@ body {
     padding: 15px;
     z-index: 100;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s, border-width 0.3s;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    border-right-width: 0;
+}
+
+#sidebar-toggle {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 200;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background 0.2s;
+}
+
+#sidebar-toggle:hover {
+    background: #f0f0f0;
 }
 
 #sidebar h2 {
@@ -90,8 +123,11 @@ body {
 /* Archive List */
 .archive-container {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
+    /* コンテンツの出し入れ用 */
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
 .accordion-header {
@@ -100,6 +136,32 @@ body {
     color: #999;
     margin-bottom: 5px;
     letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    user-select: none;
+}
+
+.accordion-header::after {
+    content: '▼';
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.archive-container.collapsed .accordion-header::after {
+    transform: rotate(-90deg);
+}
+
+.accordion-content {
+    flex: 1;
+    overflow-y: auto;
+    transition: max-height 0.3s ease-out;
+}
+
+.archive-container.collapsed .accordion-content {
+    display: none;
 }
 
 .map-item {

@@ -50,6 +50,31 @@ const app = {
         this._bindGlobalEvents();
         this.render();
         this.renderMapList();
+
+        // アコーディオン初期化
+        const savedState = localStorage.getItem('archive_collapsed');
+        const archiveContainer = document.querySelector('.archive-container');
+        if (savedState === 'true') {
+            archiveContainer.classList.add('collapsed');
+        }
+
+        // アコーディオン開閉イベント
+        document.querySelector('.accordion-header').addEventListener('click', () => {
+            archiveContainer.classList.toggle('collapsed');
+            localStorage.setItem('archive_collapsed', archiveContainer.classList.contains('collapsed'));
+        });
+
+        // サイドバー全体開閉イベント
+        const sidebar = document.getElementById('sidebar');
+        const sbToggle = document.getElementById('sidebar-toggle');
+        const sbState = localStorage.getItem('sidebar_is_collapsed');
+        if (sbState === 'true') {
+            sidebar.classList.add('collapsed');
+        }
+        sbToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebar_is_collapsed', sidebar.classList.contains('collapsed'));
+        });
     },
 
     // ==========================================================
