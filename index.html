@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue MindMap Pro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app-container">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <h2>Archives</h2>
+            </div>
+
+            <button id="new-map-btn" onclick="app.createNewMap()">+ New Map</button>
+
+            <div class="io-buttons">
+                <button onclick="app.exportJSON()">Export JSON</button>
+                <label class="import-btn">
+                    Import JSON
+                    <input type="file" accept=".json" onchange="app.importJSON(event)" style="display:none;">
+                </label>
+            </div>
+
+            <div class="archive-container">
+                <div class="accordion-header">Saved Maps</div>
+                <div id="map-list" class="accordion-content">
+                </div>
+            </div>
+
+            <div id="sidebar-note">
+                <p><b>操作ガイド:</b></p>
+                <ul>
+                    <li><b>Drag:</b> 移動・結合・切断</li>
+                    <li><b>DblClick / F2:</b> 編集</li>
+                    <li><b>Tab:</b> 子ノード追加</li>
+                    <li><b>Enter:</b> 兄弟ノード追加</li>
+                    <li><b>Arrows:</b> 移動</li>
+                </ul>
+            </div>
+        </aside>
+
+        <main id="viewport">
+            <div id="world">
+                <svg id="connections-layer"></svg>
+                <div id="nodes-layer"></div>
+            </div>
+
+            <div id="controls">
+                <div class="font-ctrl">
+                    <button class="ctrl-btn" onclick="app.changeFontSize(-2)">A-</button>
+                    <button class="ctrl-btn" onclick="app.changeFontSize(2)">A+</button>
+                </div>
+                <div class="zoom-ctrl">
+                    <button class="ctrl-btn" onclick="app.zoom(-0.1)">-</button>
+                    <button class="ctrl-btn" onclick="app.resetZoom()">⌂</button>
+                    <button class="ctrl-btn" onclick="app.zoom(0.1)">+</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
